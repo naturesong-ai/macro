@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>매크로 시장 분석</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh}
+#app{max-width:420px;margin:0 auto;padding:16px}
+h1{font-size:20px;font-weight:600;color:#111;text-align:center;margin-bottom:4px}
+#update-time{font-size:12px;color:#999;text-align:center;margin-bottom:14px}
+.section{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;border:0.5px solid #e0e0e0}
+.section-title{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid #f0f0f0}
+.row:last-child{border-bottom:none}
+.row-label{font-size:14px;color:#555;display:flex;align-items:center;gap:6px}
+.row-value{font-size:15px;font-weight:500;color:#111}
+.row-change{font-size:12px;margin-left:4px}
+.up{color:#d32f2f}
+.down{color:#1565c0}
+.score-box{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+.score-card{flex:1;background:#f8f8f8;border-radius:8px;padding:10px;text-align:center}
+.score-label{font-size:11px;color:#999;margin-bottom:4px}
+.score-val{font-size:22px;font-weight:600}
+.score-pos{color:#2e7d32}
+.score-neg{color:#c62828}
+.score-neu{color:#e65100}
+.entry-box{margin-top:10px;background:#f8f8f8;border-radius:8px;padding:10px}
+.entry-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.entry-ok{color:#2e7d32;font-weight:500}
+.entry-no{color:#c62828;font-weight:500}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500}
+.badge-ok{background:#e8f5e9;color:#2e7d32}
+.badge-warn{background:#fff8e1;color:#e65100}
+.badge-bad{background:#ffebee;color:#c62828}
+#refresh-btn{width:100%;padding:14px;font-size:15px;font-weight:500;background:#111;color:#fff;border:none;border-radius:10px;cursor:pointer;margin-bottom:8px}
+#refresh-btn:active{opacity:0.8;transform:scale(0.98)}
+#loading{text-align:center;font-size:13px;color:#999;margin-bottom:8px;min-height:18px}
+.fear-bar{height:8px;border-radius:4px;background:linear-gradient(to right,#c62828,#e65100,#f9a825,#2e7d32);margin:6px 0;position:relative}
+.fear-indicator{width:10px;height:10px;background:#111;border-radius:50%;position:absolute;top:-1px;transform:translateX(-50%)}
+.fear-labels{display:flex;justify-content:space-between;font-size:10px;color:#999}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>📊 매크로 시장 분석</h1>
+  <div id="update-time">마지막 업데이트: -</div>
+
+  <div class="section" id="score-section">
+    <div class="section-title">종합 스코어</div>
+    <div class="score-box">
+      <div class="score-card">
+        <div class="score-label">매크로</div>
+        <div class="score-val score-neu" id="sc-macro">-</div>
+      </div>
+      <div class="score-card">
+        <div class="score-label">원자재</div>
+        <div class="score-val score-neu" id="sc-commodity">-</div>
+      </div>
+      <div class="score-card">
+        <div class="score-label">종합</div>
+        <div class="score-val score-neu" id="sc-total">-</div>
+      </div>
+    </div>
+    <div class="entry-box">
+      <div class="entry-row"><span>포지션</span><span id="pos-label">-</span></div>
+      <div class="entry-row"><span>T1 단타</span><span id="t1-status">-</span></div>
+      <div class="entry-row"><span>T2 스윙</span><span id="t2-status">-</span></div>
+      <div class="entry-row"><span>T3 커플링</span><span id="t3-status">-</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">💰 암호화폐</div>
+    <div class="row">
+      <div class="row-label">🪙 비트코인 (BTC)</div>
+      <div><span class="row-value" id="btc-price">-</span><span class="row-change" id="btc-change"></span></div>
+    </div>
+    <div class="row">
+      <div class="row-label">🔷 이더리움 (ETH)</div>
+      <div><span class="row-value" id="eth-price">-</span><span class="row-change" id="eth-change"></span></div>
+    </div>
+    <div class="row">
+      <div class="row-label">📊 BTC 도미넌스</div>
+      <span class="row-value" id="btc-dom">-</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">💱 환율</div>
+    <div class="row">
+      <div class="row-label">🇰🇷 원달러 (KRW/$)</div>
+      <span class="row-value" id="krw-usd">-</span>
+    </div>
+    <div class="row">
+      <div class="row-label">🇯🇵 엔달러 (¥/$)</div>
+      <span class="row-value" id="jpy-usd">-</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🏅 귀금속</div>
+    <div class="row">
+      <div class="row-label">🥇 금 (Gold)</div>
+      <div><span class="row-value" id="gold-price">-</span><span class="row-change" id="gold-change"></span></div>
+    </div>
+    <div class="row">
+      <div class="row-label">🥈 은 (Silver)</div>
+      <div><span class="row-value" id="silver-price">-</span><span class="row-change" id="silver-change"></span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">😱 공포·탐욕 지수</div>
+    <div class="row">
+      <div class="row-label">지수</div>
+      <div><span class="row-value" id="fg-value">-</span>&nbsp;<span class="badge" id="fg-badge">-</span></div>
+    </div>
+    <div class="fear-bar">
+      <div class="fear-indicator" id="fg-indicator" style="left:50%"></div>
+    </div>
+    <div class="fear-labels"><span>극단적 공포</span><span>중립</span><span>극단적 탐욕</span></div>
+  </div>
+
+  <div id="loading"></div>
+  <button id="refresh-btn" onclick="loadAll()">🔄 새로고침</button>
+</div>
+
+<script>
+function setLoading(msg){document.getElementById('loading').textContent=msg}
+
+function fmt(n,decimals=0){
+  if(n===null||n===undefined||isNaN(n)) return '-';
+  return Number(n).toLocaleString('en-US',{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
+}
+
+function setChange(elId, pct){
+  const el=document.getElementById(elId);
+  if(!el||pct===null||pct===undefined) return;
+  const sign=pct>=0?'+':'';
+  el.textContent=` ${sign}${pct.toFixed(2)}%`;
+  el.className='row-change '+(pct>=0?'up':'down');
+}
+
+function setScore(elId, val){
+  const el=document.getElementById(elId);
+  if(!el) return;
+  el.textContent=val>=0?'+'+val:val;
+  el.className='score-val '+(val>0?'score-pos':val<0?'score-neg':'score-neu');
+}
+
+async function fetchCrypto(){
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true');
+    const d=await r.json();
+    document.getElementById('btc-price').textContent='$'+fmt(d.bitcoin.usd);
+    setChange('btc-change',d.bitcoin.usd_24h_change);
+    document.getElementById('eth-price').textContent='$'+fmt(d.ethereum.usd);
+    setChange('eth-change',d.ethereum.usd_24h_change);
+    return d.bitcoin.usd_24h_change;
+  }catch(e){console.error('crypto',e);return null;}
+}
+
+async function fetchDominance(){
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/global');
+    const d=await r.json();
+    const dom=d.data.market_cap_percentage.btc;
+    document.getElementById('btc-dom').textContent=dom.toFixed(1)+'%';
+    return dom;
+  }catch(e){console.error('dom',e);return null;}
+}
+
+async function fetchFearGreed(){
+  try{
+    const r=await fetch('https://api.alternative.me/fng/?limit=1');
+    const d=await r.json();
+    const val=parseInt(d.data[0].value);
+    const cls=d.data[0].value_classification;
+    document.getElementById('fg-value').textContent=val;
+    const badge=document.getElementById('fg-badge');
+    badge.textContent=cls;
+    badge.className='badge '+(val<=30?'badge-bad':val>=70?'badge-warn':'badge-ok');
+    document.getElementById('fg-indicator').style.left=val+'%';
+    return val;
+  }catch(e){console.error('fg',e);return null;}
+}
+
+async function fetchForex(){
+  try{
+    const r=await fetch('https://api.frankfurter.app/latest?from=USD&to=KRW,JPY');
+    const d=await r.json();
+    document.getElementById('krw-usd').textContent='₩'+fmt(d.rates.KRW);
+    document.getElementById('jpy-usd').textContent='¥'+fmt(d.rates.JPY,2);
+    return d.rates;
+  }catch(e){
+    console.error('forex',e);
+    try{
+      const r2=await fetch('https://open.er-api.com/v6/latest/USD');
+      const d2=await r2.json();
+      document.getElementById('krw-usd').textContent='₩'+fmt(d2.rates.KRW);
+      document.getElementById('jpy-usd').textContent='¥'+fmt(d2.rates.JPY,2);
+      return d2.rates;
+    }catch(e2){return null;}
+  }
+}
+
+async function fetchMetals(){
+  try{
+    const r=await fetch('https://api.metals.live/v1/spot/gold,silver');
+    const d=await r.json();
+    let gold=null,silver=null;
+    if(Array.isArray(d)){
+      d.forEach(item=>{
+        if(item.gold) gold=item.gold;
+        if(item.silver) silver=item.silver;
+      });
+    }
+    if(gold) document.getElementById('gold-price').textContent='$'+fmt(gold,2);
+    if(silver) document.getElementById('silver-price').textContent='$'+fmt(silver,2);
+    return {gold,silver};
+  }catch(e){
+    console.error('metals',e);
+    document.getElementById('gold-price').textContent='API 제한';
+    document.getElementById('silver-price').textContent='API 제한';
+    return null;
+  }
+}
+
+function calcScore(btcChange, fgValue, dom){
+  let macro=0, commodity=0;
+  if(btcChange!==null){
+    if(btcChange>3) macro+=1;
+    else if(btcChange<-3) macro-=1;
+  }
+  if(fgValue!==null){
+    if(fgValue>=70) macro-=1;
+    else if(fgValue<=25) macro+=1;
+  }
+  if(dom!==null){
+    if(dom>60) commodity+=1;
+    else if(dom<45) commodity-=1;
+  }
+  if(btcChange!==null && btcChange>0) commodity+=1;
+  const total=macro+commodity;
+
+  setScore('sc-macro',macro);
+  setScore('sc-commodity',commodity);
+  setScore('sc-total',total);
+
+  let posLabel, mult;
+  if(total>=5){posLabel='적극적 (×1.5)';mult=1.5;}
+  else if(total>=2){posLabel='기본 (×1.0)';mult=1.0;}
+  else if(total>=0){posLabel='소극적 (×0.7)';mult=0.7;}
+  else if(total>=-2){posLabel='축소 (×0.5)';mult=0.5;}
+  else{posLabel='매수 차단';mult=0;}
+
+  document.getElementById('pos-label').textContent=posLabel;
+
+  const t1=total>=-1, t2=total>=0, t3=total>=0;
+  document.getElementById('t1-status').innerHTML=t1?'<span class="entry-ok">허용</span>':'<span class="entry-no">차단</span>';
+  document.getElementById('t2-status').innerHTML=t2?'<span class="entry-ok">허용</span>':'<span class="entry-no">차단</span>';
+  document.getElementById('t3-status').innerHTML=t3?'<span class="entry-ok">허용</span>':'<span class="entry-no">차단</span>';
+}
+
+async function loadAll(){
+  document.getElementById('refresh-btn').disabled=true;
+  setLoading('데이터 불러오는 중...');
+  try{
+    const [btcChange, dom, fgVal] = await Promise.all([
+      fetchCrypto(),
+      fetchDominance(),
+      fetchFearGreed(),
+    ]);
+    await Promise.all([fetchForex(), fetchMetals()]);
+    calcScore(btcChange, fgVal, dom);
+    const now=new Date();
+    const timeStr=now.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('update-time').textContent='마지막 업데이트: '+timeStr;
+    setLoading('');
+  }catch(e){
+    setLoading('일부 데이터 로드 실패 — 다시 시도해 주세요');
+  }
+  document.getElementById('refresh-btn').disabled=false;
+}
+
+loadAll();
+</script>
+</body>
+</html>
