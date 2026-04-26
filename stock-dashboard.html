@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Quant Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#e8e8f0;--text2:#8888aa;
+  --up:#00d97e;--dn:#ff4d6d;--neu:#f0a500;--blue:#4f8ef7;--purple:#a78bfa;
+  --r:10px;--r2:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;overscroll-behavior:none}
+.header{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-filter:blur(20px);border-bottom:0.5px solid var(--border2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:17px;font-weight:600;letter-spacing:-0.3px}
+.header-right{display:flex;align-items:center;gap:10px}
+.refresh-btn{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);font-size:12px;padding:6px 12px;border-radius:20px;cursor:pointer}
+.refresh-btn:active{opacity:0.7}
+.updated{font-size:11px;color:var(--text2)}
+.tabs-wrap{position:sticky;top:57px;z-index:90;background:rgba(10,10,15,0.95);backdrop-filter:blur(20px);border-bottom:0.5px solid var(--border)}
+.tabs{display:flex;overflow-x:auto;scrollbar-width:none;padding:0 12px;gap:4px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;font-size:13px;padding:10px 14px;color:var(--text2);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .2s}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.content{padding:14px;max-width:680px;margin:0 auto}
+.view{display:none}.view.active{display:block}
+.ticker-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.ticker-input{flex:1;min-width:120px;background:var(--bg2);border:0.5px solid var(--border2);color:var(--text);font-size:14px;padding:10px 14px;border-radius:var(--r);text-transform:uppercase;outline:none}
+.ticker-input:focus{border-color:var(--blue)}
+.go-btn{background:var(--blue);color:white;border:none;font-size:14px;font-weight:500;padding:10px 20px;border-radius:var(--r);cursor:pointer}
+.go-btn:active{opacity:0.8}
+.chip-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.chip{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--border2);color:var(--text2);cursor:pointer;background:var(--bg2)}
+.chip.active{background:var(--blue);color:white;border-color:var(--blue)}
+.stock-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px;margin-bottom:10px}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.card-ticker{font-size:18px;font-weight:700;letter-spacing:-0.5px}
+.card-name{font-size:11px;color:var(--text2);margin-top:2px}
+.card-price{text-align:right}
+.card-price-val{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.card-chg{font-size:12px;margin-top:2px;font-weight:500}
+.up-text{color:var(--up)}.dn-text{color:var(--dn)}.neu-text{color:var(--neu)}
+.card-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cm{background:var(--bg3);border-radius:var(--r);padding:8px 10px}
+.cm-label{font-size:9px;color:var(--text2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px}
+.cm-val{font-size:14px;font-weight:500}
+.bar52{height:3px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden}
+.bar52-fill{height:3px;border-radius:2px;transition:width .5s}
+.detail-panel{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px;margin-bottom:12px}
+.detail-title{font-size:13px;font-weight:500;color:var(--text2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px}
+.chart-wrap{position:relative;width:100%;height:180px;margin-bottom:4px}
+.metric-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+.metric-box{background:var(--bg3);border-radius:var(--r);padding:10px 12px}
+.mb-label{font-size:10px;color:var(--text2);margin-bottom:4px}
+.mb-val{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.mb-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.trend-bars{display:flex;flex-direction:column;gap:6px}
+.trend-bar-row{display:flex;align-items:center;gap:8px}
+.trend-label{font-size:11px;color:var(--text2);min-width:90px}
+.trend-bar-bg{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.trend-bar-fill{height:6px;border-radius:3px;transition:width .6s}
+.trend-pct{font-size:11px;font-weight:500;min-width:36px;text-align:right}
+.markov-table{width:100%;border-collapse:collapse;font-size:12px}
+.markov-table th{color:var(--text2);font-size:10px;font-weight:500;padding:6px 8px;border-bottom:0.5px solid var(--border);text-align:center}
+.markov-table td{padding:7px 8px;border-bottom:0.5px solid var(--border);text-align:center}
+.markov-table .row-label{text-align:left;color:var(--text2);font-size:11px}
+.cmp-table{width:100%;border-collapse:collapse;font-size:11px}
+.cmp-table th{color:var(--text2);font-size:10px;padding:6px 6px;border-bottom:0.5px solid var(--border);text-align:right}
+.cmp-table th:first-child{text-align:left}
+.cmp-table td{padding:7px 6px;border-bottom:0.5px solid var(--border);text-align:right;font-variant-numeric:tabular-nums}
+.cmp-table td:first-child{text-align:left;color:var(--text2);font-size:10px}
+.weight-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.weight-ticker{font-size:13px;font-weight:600;min-width:50px}
+.weight-slider{flex:1;accent-color:var(--blue)}
+.weight-val{font-size:12px;min-width:36px;text-align:right;color:var(--text2)}
+.port-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.loading{text-align:center;padding:40px 20px;color:var(--text2)}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{background:rgba(255,77,109,0.1);border:0.5px solid rgba(255,77,109,0.3);border-radius:var(--r);padding:12px;font-size:13px;color:var(--dn);margin-bottom:10px}
+.guide-panel{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px;margin-bottom:12px}
+.guide-title{font-size:12px;font-weight:600;color:var(--purple);letter-spacing:.05em;margin-bottom:12px}
+.guide-item{margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--border)}
+.guide-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.guide-term{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:4px}
+.guide-desc{font-size:12px;color:var(--text2);line-height:1.6}
+.guide-example{margin-top:6px;background:var(--bg2);border-radius:6px;padding:8px 10px}
+.guide-ex-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.guide-ex-row:last-child{margin-bottom:0}
+.guide-ex-label{color:var(--text2)}
+.guide-ex-val{font-weight:500}
+.guide-badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;margin-left:4px}
+.badge-good{background:rgba(0,217,126,0.15);color:var(--up)}
+.badge-warn{background:rgba(240,165,0,0.15);color:var(--neu)}
+.badge-bad{background:rgba(255,77,109,0.15);color:var(--dn)}
+.notice-box{background:rgba(79,142,247,0.08);border:0.5px solid rgba(79,142,247,0.25);border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📈 Quant Dashboard</h1>
+  <div class="header-right">
+    <span class="updated" id="updatedTime">--:--</span>
+    <button class="refresh-btn" onclick="refreshAll()">새로고침</button>
+  </div>
+</div>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('overview')">종목 개요</div>
+    <div class="tab" onclick="switchTab('chart')">가격 차트</div>
+    <div class="tab" onclick="switchTab('quant')">퀀트 분석</div>
+    <div class="tab" onclick="switchTab('micro')">미세 추세</div>
+    <div class="tab" onclick="switchTab('compare')">비교</div>
+    <div class="tab" onclick="switchTab('portfolio')">포트폴리오</div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="notice-box">📡 Yahoo Finance 실시간 API 사용 — 데이터 로드에 5~10초 소요될 수 있습니다.</div>
+
+  <div class="ticker-row">
+    <input class="ticker-input" id="tickerInput" placeholder="티커 입력 (예: AAPL)" value="ASTS" maxlength="10" onkeydown="if(event.key==='Enter')loadStock()">
+    <button class="go-btn" onclick="loadStock()">조회</button>
+  </div>
+  <div class="chip-row">
+    <div class="chip active" onclick="selectTicker('ASTS',this)">ASTS</div>
+    <div class="chip" onclick="selectTicker('RDW',this)">RDW</div>
+    <div class="chip" onclick="selectTicker('MSTR',this)">MSTR</div>
+    <div class="chip" onclick="selectTicker('POET',this)">POET</div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="view active" id="view-overview">
+    <div id="overview-content"><div class="loading"><div class="spinner"></div>데이터 불러오는 중...</div></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="view" id="view-chart">
+    <div class="detail-panel">
+      <div class="detail-title">60일 가격 차트</div>
+      <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- QUANT -->
+  <div class="view" id="view-quant">
+    <div id="quant-content"><div class="loading"><div class="spinner"></div>퀀트 분석 중...</div></div>
+    <div class="guide-panel">
+      <div class="guide-title">📖 퀀트 지표 해석 가이드</div>
+      <div class="guide-item">
+        <div class="guide-term">95% VaR (Value at Risk)</div>
+        <div class="guide-desc">향후 3개월 동안 95% 확률로 이 손실을 넘지 않는다는 최대 손실 추정치입니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">10% 미만</span><span class="guide-ex-val"><span class="badge-good guide-badge">안전</span> 손실 위험 낮음</span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">10~25%</span><span class="guide-ex-val"><span class="badge-warn guide-badge">주의</span> 중간 위험</span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">25% 초과</span><span class="guide-ex-val"><span class="badge-bad guide-badge">위험</span> 고변동성 종목</span></div>
+        </div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-term">95% CVaR (Conditional VaR)</div>
+        <div class="guide-desc">최악의 5% 상황이 실제 발생했을 때의 평균 손실입니다. 꼬리 위험(Tail Risk)을 측정합니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">CVaR이 VaR의 1.5배 이하</span><span class="guide-ex-val"><span class="badge-good guide-badge">양호</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">CVaR이 VaR의 2배 이상</span><span class="guide-ex-val"><span class="badge-bad guide-badge">극단 하락 주의</span></span></div>
+        </div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-term">수익 확률</div>
+        <div class="guide-desc">몬테카를로 시뮬레이션으로 계산한 3개월 후 수익 가능성입니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">60% 이상</span><span class="guide-ex-val"><span class="badge-good guide-badge">상승 우세</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">45~60%</span><span class="guide-ex-val"><span class="badge-warn guide-badge">방향성 불명확</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">45% 미만</span><span class="guide-ex-val"><span class="badge-bad guide-badge">하락 우세</span></span></div>
+        </div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-term">연간 변동성 (Sigma)</div>
+        <div class="guide-desc">높을수록 가격 변동이 크고 위험합니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">20% 미만</span><span class="guide-ex-val"><span class="badge-good guide-badge">저변동</span> 안정적</span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">20~50%</span><span class="guide-ex-val"><span class="badge-warn guide-badge">중변동</span> 성장주 수준</span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">50% 이상</span><span class="guide-ex-val"><span class="badge-bad guide-badge">고변동</span> 투기적 종목</span></div>
+        </div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-term">10% / 90% 분위 수익률</div>
+        <div class="guide-desc">비관(하위 10%) 시나리오와 낙관(상위 90%) 시나리오의 예상 수익률입니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">예시: p10 -20%, p90 +35%</span><span class="guide-ex-val">최악 -20% / 최선 +35%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MICRO -->
+  <div class="view" id="view-micro">
+    <div id="micro-content"><div class="loading"><div class="spinner"></div>미세 추세 분석 중...</div></div>
+    <div class="guide-panel">
+      <div class="guide-title">📖 미세 추세 해석 가이드</div>
+      <div class="guide-item">
+        <div class="guide-term">추세 유형 분류 (8가지)</div>
+        <div class="guide-desc">최근 60일을 5봉 단위로 분석해 각 구간을 8가지 패턴으로 분류합니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">강한 상승</span><span class="guide-ex-val"><span class="badge-good guide-badge">매수 우호</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">상승 전환</span><span class="guide-ex-val"><span class="badge-warn guide-badge">반전 신호</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">강한 하락</span><span class="guide-ex-val"><span class="badge-bad guide-badge">매도 우호</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">횡보/노이즈</span><span class="guide-ex-val"><span class="badge-warn guide-badge">중립</span></span></div>
+        </div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-term">상승/하락/횡보 비율</div>
+        <div class="guide-desc">60일 전체에서 각 추세가 차지한 비율로 전반적인 방향을 파악합니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">상승 60% 이상</span><span class="guide-ex-val"><span class="badge-good guide-badge">상승 추세</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">하락 60% 이상</span><span class="guide-ex-val"><span class="badge-bad guide-badge">하락 추세</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">횡보 50% 이상</span><span class="guide-ex-val"><span class="badge-warn guide-badge">돌파 대기</span></span></div>
+        </div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-term">마르코프 전이 확률</div>
+        <div class="guide-desc">현재 추세에서 다음 구간으로 전환될 통계적 확률입니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">상승→상승 높음</span><span class="guide-ex-val"><span class="badge-good guide-badge">모멘텀 지속</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">하락→상승 높음</span><span class="guide-ex-val"><span class="badge-good guide-badge">반등 신호</span></span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">상승→하락 높음</span><span class="guide-ex-val"><span class="badge-warn guide-badge">고점 주의</span></span></div>
+        </div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-term">실전 활용 팁</div>
+        <div class="guide-desc">퀀트 분석(수익 확률)과 함께 해석하면 신뢰도가 높아집니다.</div>
+        <div class="guide-example">
+          <div class="guide-ex-row"><span class="guide-ex-label">매수 우호</span><span class="guide-ex-val">상승비율 55%↑ + 수익확률 60%↑</span></div>
+          <div class="guide-ex-row"><span class="guide-ex-label">매도 신호</span><span class="guide-ex-val">하락비율 60%↑ + 상승→하락 전이↑</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARE -->
+  <div class="view" id="view-compare">
+    <div id="compare-content"><div class="loading"><div class="spinner"></div>비교 데이터 불러오는 중...</div></div>
+  </div>
+
+  <!-- PORTFOLIO -->
+  <div class="view" id="view-portfolio">
+    <div class="detail-panel">
+      <div class="detail-title">포트폴리오 비중 설정</div>
+      <div id="weight-controls"></div>
+    </div>
+    <div id="portfolio-content"><div class="loading"><div class="spinner"></div>포트폴리오 분석 중...</div></div>
+  </div>
+</div>
+
+<script>
+// ── 설정 ─────────────────────────────────────────────────────────────────────
+const COLORS = {ASTS:'#4f8ef7',RDW:'#00d97e',MSTR:'#f0a500',POET:'#a78bfa'};
+const DEFAULT_TICKERS = ['ASTS','RDW','MSTR','POET'];
+let currentTicker = 'ASTS';
+let currentTab = 'overview';
+let stockData = {};
+let portWeights = {ASTS:25,RDW:25,MSTR:25,POET:25};
+let chartInst = null;
+
+// ── Yahoo Finance API (CORS 프록시) ──────────────────────────────────────────
+const PROXY = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+
+async function fetchYahoo(ticker, range='6mo', interval='1d') {
+  const url = `${PROXY}${ticker}?range=${range}&interval=${interval}&includePrePost=false`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${ticker} 데이터 없음`);
+  const json = await r.json();
+  const result = json.chart?.result?.[0];
+  if (!result) throw new Error(`${ticker} 데이터 없음`);
+  return result;
+}
+
+async function fetchStockInfo(ticker) {
+  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryDetail,financialData,defaultKeyStatistics,price`;
+  const r = await fetch(url);
+  const json = await r.json();
+  return json.quoteSummary?.result?.[0] || {};
+}
+
+// ── 수학 유틸 ─────────────────────────────────────────────────────────────────
+function randNormal() {
+  let u=0,v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+function monteCarlo(S0, sigmaDaily, days=63, nSim=300) {
+  const results = [];
+  for (let i=0; i<nSim; i++) {
+    let s = S0;
+    for (let j=0; j<days; j++) {
+      s *= Math.exp(-0.5*sigmaDaily**2 + sigmaDaily*randNormal());
+    }
+    results.push(s);
+  }
+  const finals = results.sort((a,b)=>a-b);
+  const returns = finals.map(f=>(f-S0)/S0).sort((a,b)=>a-b);
+  const idx = Math.floor(0.05*returns.length);
+  const cvarSum = returns.slice(0,idx).reduce((a,b)=>a+b,0);
+  return {
+    var95: (-returns[idx]*100).toFixed(2),
+    cvar95: (-cvarSum/Math.max(idx,1)*100).toFixed(2),
+    prob_gain: (returns.filter(r=>r>0).length/returns.length*100).toFixed(1),
+    median_ret: (returns[Math.floor(returns.length/2)]*100).toFixed(2),
+    p10: (returns[Math.floor(0.10*returns.length)]*100).toFixed(2),
+    p90: (returns[Math.floor(0.90*returns.length)]*100).toFixed(2),
+  };
+}
+
+function detectMicroTrends(prices, window=5, threshMult=0.8) {
+  if (prices.length < window+1) return {};
+  const logDiffs = [];
+  for (let i=1; i<prices.length; i++) logDiffs.push(Math.log(prices[i]/prices[i-1]));
+  const mean = logDiffs.reduce((a,b)=>a+b,0)/logDiffs.length;
+  const sig = Math.sqrt(logDiffs.reduce((a,b)=>a+(b-mean)**2,0)/logDiffs.length);
+  const thresh = sig * threshMult;
+
+  const counts = {strong_up:0,weak_up:0,strong_dn:0,weak_dn:0,rev_up:0,rev_dn:0,lateral:0,volatile:0,noise:0};
+  const markov = {up:{up:0,dn:0,lat:0},dn:{up:0,dn:0,lat:0},lat:{up:0,dn:0,lat:0}};
+  let prevState = null;
+
+  for (let i=window; i<prices.length; i++) {
+    const seg = prices.slice(i-window, i+1);
+    const s0 = seg[0] || 1e-10;
+    const ret = (seg[seg.length-1]-s0)/Math.abs(s0);
+    const rets = [];
+    for (let j=0; j<seg.length-1; j++) {
+      const denom = seg[j] || 1e-10;
+      rets.push((seg[j+1]-seg[j])/Math.abs(denom));
+    }
+    if (!rets.length) continue;
+    const slope = rets.reduce((a,r,j)=>a+(j-rets.length/2)*r,0)/(rets.length+1e-10);
+    const retMean = rets.reduce((a,b)=>a+b,0)/rets.length;
+    const vol = Math.sqrt(rets.reduce((a,b)=>a+(b-retMean)**2,0)/rets.length);
+    let peak=seg[0], dd=0;
+    for (const v of seg) { if(v>peak) peak=v; dd=Math.max(dd,(peak-v)/(peak+1e-10)); }
+
+    let t;
+    if (Math.abs(ret)<thresh*0.5 && vol<sig*0.8) t='lateral';
+    else if (ret>thresh && slope>0) {
+      let cu=0,tmp=0;
+      for (const r of rets) { if(r>0){tmp++;cu=Math.max(cu,tmp);}else tmp=0; }
+      t = cu>=Math.floor(window*0.6)?'strong_up':'weak_up';
+    } else if (ret<-thresh && slope<0) {
+      let cd=0,tmp=0;
+      for (const r of rets) { if(r<0){tmp++;cd=Math.max(cd,tmp);}else tmp=0; }
+      t = cd>=Math.floor(window*0.6)?'strong_dn':'weak_dn';
+    } else if (Math.abs(ret)>thresh && rets.length>=2 && (rets[0]>0)!==(rets[rets.length-1]>0)) {
+      t = ret>0?'rev_up':'rev_dn';
+    } else if (dd>thresh*2) t='volatile';
+    else t='noise';
+
+    counts[t]=(counts[t]||0)+1;
+    const cur = ['strong_up','weak_up','rev_up'].includes(t)?'up':['strong_dn','weak_dn','rev_dn'].includes(t)?'dn':'lat';
+    if (prevState) markov[prevState][cur]++;
+    prevState = cur;
+  }
+
+  const total = Object.values(counts).reduce((a,b)=>a+b,0)||1;
+  const mkProb = {};
+  for (const [s,trans] of Object.entries(markov)) {
+    const tot = Object.values(trans).reduce((a,b)=>a+b,0)||1;
+    mkProb[s] = Object.fromEntries(Object.entries(trans).map(([t,v])=>[t,+(v/tot*100).toFixed(1)]));
+  }
+  return {
+    counts,
+    probs: Object.fromEntries(Object.entries(counts).map(([k,v])=>[k,+(v/total*100).toFixed(1)])),
+    up_pct: +((counts.strong_up+counts.weak_up+counts.rev_up)/total*100).toFixed(1),
+    dn_pct: +((counts.strong_dn+counts.weak_dn+counts.rev_dn)/total*100).toFixed(1),
+    lat_pct: +((counts.lateral+counts.volatile+counts.noise)/total*100).toFixed(1),
+    markov: mkProb,
+  };
+}
+
+// ── 데이터 로드 ───────────────────────────────────────────────────────────────
+async function fetchStock(ticker) {
+  try {
+    const [chart, info] = await Promise.all([
+      fetchYahoo(ticker, '6mo', '1d'),
+      fetchStockInfo(ticker).catch(()=>({}))
+    ]);
+
+    const closes = chart.indicators.quote[0].close.map(v=>v||0).filter(v=>v>0);
+    const timestamps = chart.timestamp;
+    const dates = timestamps.slice(-60).map(t=>new Date(t*1000).toISOString().slice(0,10));
+
+    const price = closes[closes.length-1];
+    const prev  = closes[closes.length-2]||price;
+    const chgPct = (price-prev)/prev*100;
+
+    const logRets = [];
+    for (let i=1; i<closes.length; i++) logRets.push(Math.log(closes[i]/closes[i-1]));
+    const retMean = logRets.reduce((a,b)=>a+b,0)/logRets.length;
+    const sigmaDaily = Math.sqrt(logRets.reduce((a,b)=>a+(b-retMean)**2,0)/logRets.length);
+    const sigmaAnnual = sigmaDaily*Math.sqrt(252);
+
+    const mc = monteCarlo(price, sigmaDaily, 63, 300);
+    const micro = detectMicroTrends(closes, 5);
+
+    const sd = info.summaryDetail||{};
+    const fd = info.financialData||{};
+    const ks = info.defaultKeyStatistics||{};
+    const pr = info.price||{};
+
+    const high52 = sd.fiftyTwoWeekHigh?.raw || Math.max(...closes);
+    const low52  = sd.fiftyTwoWeekLow?.raw  || Math.min(...closes);
+    const pos52  = +((price-low52)/(high52-low52+1e-10)*100).toFixed(1);
+    const target = fd.targetMeanPrice?.raw || price;
+    const beta   = ks.beta?.raw || sd.beta?.raw || 1.0;
+    const mktcap = pr.marketCap?.raw || 0;
+    const volume = pr.volume?.raw || sd.volume?.raw || 0;
+    const name   = pr.shortName || pr.longName || ticker;
+    const sector = info.summaryProfile?.sector || 'N/A';
+
+    const result = {
+      ticker, name, sector,
+      price: +price.toFixed(2),
+      prev: +prev.toFixed(2),
+      chg: +(price-prev).toFixed(2),
+      chg_pct: +chgPct.toFixed(2),
+      high52: +high52.toFixed(2),
+      low52:  +low52.toFixed(2),
+      pos52, target: +target.toFixed(2),
+      beta: +(beta||1).toFixed(2),
+      mktcap, volume,
+      sigma_daily:  +(sigmaDaily*100).toFixed(3),
+      sigma_annual: +(sigmaAnnual*100).toFixed(2),
+      monte_carlo: mc,
+      micro_trends: micro,
+      history: { dates, closes: closes.slice(-60).map(v=>+v.toFixed(2)) },
+      updated: new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}),
+    };
+    stockData[ticker] = result;
+    document.getElementById('updatedTime').textContent = result.updated;
+    return result;
+  } catch(e) {
+    stockData[ticker] = {error: e.message, ticker};
+    return null;
+  }
+}
+
+// ── 탭 전환 ───────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  const tabs = ['overview','chart','quant','micro','compare','portfolio'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===tab));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+  if (tab==='compare') loadCompare();
+  if (tab==='portfolio') loadPortfolio();
+}
+
+function selectTicker(ticker, el) {
+  currentTicker = ticker;
+  document.getElementById('tickerInput').value = ticker;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  loadStock();
+}
+
+function loadStock() {
+  const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+  if (!ticker) return;
+  currentTicker = ticker;
+  if (!COLORS[ticker]) COLORS[ticker]='#4f8ef7';
+  setLoading();
+  fetchStock(ticker).then(()=>renderCurrentTab());
+}
+
+function setLoading() {
+  ['overview','quant','micro'].forEach(t=>{
+    const el=document.getElementById(t+'-content');
+    if(el) el.innerHTML='<div class="loading"><div class="spinner"></div>데이터 불러오는 중...</div>';
+  });
+}
+
+async function loadCompare() {
+  document.getElementById('compare-content').innerHTML='<div class="loading"><div class="spinner"></div>4종목 비교 중...</div>';
+  const promises = DEFAULT_TICKERS.map(t=>stockData[t]?Promise.resolve(stockData[t]):fetchStock(t));
+  await Promise.all(promises);
+  renderCompare();
+}
+
+async function loadPortfolio() {
+  document.getElementById('portfolio-content').innerHTML='<div class="loading"><div class="spinner"></div>포트폴리오 분석 중...</div>';
+  const promises = DEFAULT_TICKERS.map(t=>stockData[t]?Promise.resolve(stockData[t]):fetchStock(t));
+  const stocks = (await Promise.all(promises)).filter(s=>s&&!s.error);
+  renderPortfolio(stocks);
+}
+
+// ── 렌더 함수들 ───────────────────────────────────────────────────────────────
+function renderCurrentTab() {
+  const d = stockData[currentTicker];
+  if (!d) return;
+  if (d.error) {
+    ['overview','quant','micro'].forEach(t=>{
+      const el=document.getElementById(t+'-content');
+      if(el) el.innerHTML=`<div class="error-box">${d.error}</div>`;
+    });
+    return;
+  }
+  renderOverview(d); renderChart(d); renderQuant(d); renderMicro(d);
+}
+
+function fmtNum(n) {
+  if (!n&&n!==0) return 'N/A';
+  if (Math.abs(n)>=1e12) return (n/1e12).toFixed(2)+'T';
+  if (Math.abs(n)>=1e9)  return (n/1e9).toFixed(2)+'B';
+  if (Math.abs(n)>=1e6)  return (n/1e6).toFixed(2)+'M';
+  return n.toLocaleString();
+}
+
+function renderOverview(d) {
+  const chgUp=d.chg_pct>=0, color=COLORS[d.ticker]||'#4f8ef7';
+  const upside=d.target&&d.price?((d.target-d.price)/d.price*100):0;
+  document.getElementById('overview-content').innerHTML=`
+  <div class="stock-card" style="border-left:3px solid ${color}">
+    <div class="card-top">
+      <div><div class="card-ticker">${d.ticker}</div><div class="card-name">${d.name}</div></div>
+      <div class="card-price">
+        <div class="card-price-val">$${d.price.toFixed(2)}</div>
+        <div class="card-chg ${chgUp?'up-text':'dn-text'}">${chgUp?'+':''}${d.chg_pct.toFixed(2)}%</div>
+      </div>
+    </div>
+    <div class="card-metrics">
+      <div class="cm"><div class="cm-label">52주 최고</div><div class="cm-val">$${d.high52}</div></div>
+      <div class="cm"><div class="cm-label">52주 최저</div><div class="cm-val">$${d.low52}</div></div>
+      <div class="cm"><div class="cm-label">52주 위치</div><div class="cm-val">${d.pos52}%</div></div>
+      <div class="cm"><div class="cm-label">베타</div><div class="cm-val" style="color:${d.beta>2?'var(--dn)':d.beta>1.5?'var(--neu)':'var(--up)'}">${d.beta}</div></div>
+      <div class="cm"><div class="cm-label">연간 변동성</div><div class="cm-val">${d.sigma_annual}%</div></div>
+      <div class="cm"><div class="cm-label">시가총액</div><div class="cm-val">${fmtNum(d.mktcap)}</div></div>
+    </div>
+    <div class="bar52"><div class="bar52-fill" style="width:${d.pos52}%;background:${color}"></div></div>
+  </div>
+  <div class="stock-card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <div><div style="font-size:11px;color:var(--text2)">애널리스트 목표가</div><div style="font-size:18px;font-weight:600">$${d.target}</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--text2)">상승여력</div><div style="font-size:18px;font-weight:600;color:${upside>=0?'var(--up)':'var(--dn)'}">${upside>=0?'+':''}${upside.toFixed(1)}%</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--text2)">섹터: ${d.sector} &nbsp;|&nbsp; 거래량: ${fmtNum(d.volume)}</div>
+  </div>`;
+}
+
+function renderChart(d) {
+  if (!d.history) return;
+  const color=COLORS[d.ticker]||'#4f8ef7';
+  if (chartInst){chartInst.destroy();chartInst=null;}
+  chartInst=new Chart(document.getElementById('priceChart'),{
+    type:'line',
+    data:{labels:d.history.dates,datasets:[{data:d.history.closes,borderColor:color,borderWidth:2,pointRadius:0,fill:true,backgroundColor:color+'18',tension:0.3}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${c.raw.toFixed(2)}`}}},
+      scales:{
+        x:{ticks:{maxTicksLimit:5,font:{size:10},color:'#8888aa'},grid:{display:false}},
+        y:{ticks:{font:{size:10},color:'#8888aa',callback:v=>'$'+v.toFixed(0)},grid:{color:'rgba(255,255,255,0.05)'}}
+      }
+    }
+  });
+}
+
+function renderQuant(d) {
+  if (!d.monte_carlo){document.getElementById('quant-content').innerHTML='<div class="error-box">퀀트 데이터 없음</div>';return;}
+  const mc=d.monte_carlo;
+  document.getElementById('quant-content').innerHTML=`
+  <div class="detail-panel">
+    <div class="detail-title">몬테카를로 시뮬레이션 (3개월)</div>
+    <div class="metric-row">
+      <div class="metric-box"><div class="mb-label">95% VaR</div><div class="mb-val dn-text">-${mc.var95}%</div><div class="mb-sub">최대 손실 한계</div></div>
+      <div class="metric-box"><div class="mb-label">95% CVaR</div><div class="mb-val dn-text">-${mc.cvar95}%</div><div class="mb-sub">꼬리 리스크</div></div>
+      <div class="metric-box"><div class="mb-label">수익 확률</div><div class="mb-val up-text">${mc.prob_gain}%</div><div class="mb-sub">양수 수익 가능성</div></div>
+      <div class="metric-box"><div class="mb-label">중간값 수익</div><div class="mb-val ${mc.median_ret>=0?'up-text':'dn-text'}">${mc.median_ret>=0?'+':''}${mc.median_ret}%</div><div class="mb-sub">중간 시나리오</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:4px">
+      <span>비관(10%): <span class="dn-text">${mc.p10}%</span></span>
+      <span>낙관(90%): <span class="up-text">+${mc.p90}%</span></span>
+    </div>
+  </div>
+  <div class="detail-panel">
+    <div class="detail-title">변동성 분석</div>
+    <div class="metric-row">
+      <div class="metric-box"><div class="mb-label">일간 변동성</div><div class="mb-val">${d.sigma_daily}%</div><div class="mb-sub">하루 평균 변동폭</div></div>
+      <div class="metric-box"><div class="mb-label">연간 변동성</div><div class="mb-val">${d.sigma_annual}%</div><div class="mb-sub">연간 환산</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--text2)">3개월 예상 변동폭: <span style="font-weight:600;color:var(--text)">±${(d.sigma_annual*Math.sqrt(63/252)).toFixed(1)}%</span></div>
+  </div>`;
+}
+
+function renderMicro(d) {
+  if (!d.micro_trends?.probs){document.getElementById('micro-content').innerHTML='<div class="error-box">미세 추세 데이터 없음</div>';return;}
+  const mt=d.micro_trends;
+  const patterns=[
+    {key:'strong_up',label:'강한 상승',color:'#00d97e'},
+    {key:'weak_up',  label:'약한 상승',color:'#5dcaa5'},
+    {key:'strong_dn',label:'강한 하락',color:'#ff4d6d'},
+    {key:'weak_dn',  label:'약한 하락',color:'#f09595'},
+    {key:'rev_up',   label:'상승 전환',color:'#63c722'},
+    {key:'rev_dn',   label:'하락 전환',color:'#d85a30'},
+    {key:'lateral',  label:'횡보',     color:'#f0a500'},
+    {key:'noise',    label:'노이즈',   color:'#555577'},
+  ];
+  const trendBars=patterns.map(p=>{
+    const pct=mt.probs[p.key]||0;
+    return `<div class="trend-bar-row">
+      <div class="trend-label">${p.label}</div>
+      <div class="trend-bar-bg"><div class="trend-bar-fill" style="width:${Math.min(100,pct*3)}%;background:${p.color}"></div></div>
+      <div class="trend-pct" style="color:${p.color}">${pct}%</div>
+    </div>`;
+  }).join('');
+  const mk=mt.markov||{};
+  const stateLabel={up:'상승 추세',dn:'하락 추세',lat:'횡보'};
+  const stateColor={up:'var(--up)',dn:'var(--dn)',lat:'var(--neu)'};
+  let mkRows='';
+  for (const from of ['up','dn','lat']) {
+    if(!mk[from]) continue;
+    const maxVal=Math.max(...Object.values(mk[from]));
+    const cells=['up','dn','lat'].map(to=>`<td style="color:${mk[from][to]===maxVal?stateColor[to]:'var(--text2)'};font-weight:${mk[from][to]===maxVal?'600':'400'}">${mk[from][to]||0}%</td>`).join('');
+    mkRows+=`<tr><td class="row-label">${stateLabel[from]}</td>${cells}</tr>`;
+  }
+  document.getElementById('micro-content').innerHTML=`
+  <div class="detail-panel">
+    <div class="detail-title">추세 분포 (60일)</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div class="metric-box"><div class="mb-label">상승 비율</div><div class="mb-val up-text">${mt.up_pct}%</div></div>
+      <div class="metric-box"><div class="mb-label">하락 비율</div><div class="mb-val dn-text">${mt.dn_pct}%</div></div>
+      <div class="metric-box"><div class="mb-label">횡보</div><div class="mb-val neu-text">${mt.lat_pct}%</div></div>
+    </div>
+    <div class="trend-bars">${trendBars}</div>
+  </div>
+  <div class="detail-panel">
+    <div class="detail-title">마르코프 전이 확률</div>
+    <table class="markov-table">
+      <thead><tr><th style="text-align:left">현재→다음</th><th style="color:var(--up)">상승</th><th style="color:var(--dn)">하락</th><th style="color:var(--neu)">횡보</th></tr></thead>
+      <tbody>${mkRows}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderCompare() {
+  const stocks=DEFAULT_TICKERS.map(t=>stockData[t]).filter(s=>s&&!s.error);
+  if (!stocks.length) return;
+  const rows=[
+    ['현재가',    s=>`$${s.price.toFixed(2)}`],
+    ['일간 변동', s=>`<span class="${s.chg_pct>=0?'up-text':'dn-text'}">${s.chg_pct>=0?'+':''}${s.chg_pct.toFixed(1)}%</span>`],
+    ['52주 최고', s=>`$${s.high52}`],
+    ['52주 최저', s=>`$${s.low52}`],
+    ['52주 위치', s=>`${s.pos52}%`],
+    ['연간 변동성',s=>`${s.sigma_annual}%`],
+    ['베타',      s=>`<span style="color:${s.beta>2?'var(--dn)':s.beta>1.5?'var(--neu)':'var(--up)'}">${s.beta}</span>`],
+    ['목표가',    s=>`$${s.target}`],
+    ['상승여력',  s=>{const u=((s.target-s.price)/s.price*100);return `<span class="${u>=0?'up-text':'dn-text'}">${u>=0?'+':''}${u.toFixed(1)}%</span>`;}],
+    ['VaR 95%',  s=>`<span class="dn-text">-${s.monte_carlo?.var95||'?'}%</span>`],
+    ['수익확률',  s=>`<span class="up-text">${s.monte_carlo?.prob_gain||'?'}%</span>`],
+    ['상승비율',  s=>`${s.micro_trends?.up_pct||'?'}%`],
+  ];
+  const theads=stocks.map(s=>`<th style="color:${COLORS[s.ticker]||'#fff'}">${s.ticker}</th>`).join('');
+  const tbodies=rows.map(([label,fn])=>`<tr><td>${label}</td>${stocks.map(s=>`<td>${fn(s)}</td>`).join('')}</tr>`).join('');
+  document.getElementById('compare-content').innerHTML=`
+  <div class="detail-panel" style="overflow-x:auto">
+    <div class="detail-title">4종목 상세 비교</div>
+    <table class="cmp-table">
+      <thead><tr><th>지표</th>${theads}</tr></thead>
+      <tbody>${tbodies}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderPortfolio(stocks) {
+  if (!stocks.length){document.getElementById('portfolio-content').innerHTML='<div class="error-box">데이터 없음</div>';return;}
+  const weights=DEFAULT_TICKERS.map(t=>portWeights[t]/100);
+  const totalW=weights.reduce((a,b)=>a+b,0);
+  const normW=weights.map(w=>w/totalW);
+  const portBeta=stocks.reduce((a,s,i)=>a+s.beta*normW[i],0);
+  const portSigma=Math.sqrt(stocks.reduce((a,s,i)=>a+(s.sigma_daily*normW[i])**2,0));
+  const mc=monteCarlo(100,portSigma/100,63,500);
+  const portSigmaAnnual=(portSigma/100*Math.sqrt(252)*100).toFixed(2);
+  document.getElementById('portfolio-content').innerHTML=`
+  <div class="port-metrics">
+    <div class="metric-box"><div class="mb-label">포트폴리오 베타</div><div class="mb-val">${portBeta.toFixed(2)}</div><div class="mb-sub">가중 평균</div></div>
+    <div class="metric-box"><div class="mb-label">연간 변동성</div><div class="mb-val">${portSigmaAnnual}%</div><div class="mb-sub">포트폴리오</div></div>
+    <div class="metric-box"><div class="mb-label">95% VaR</div><div class="mb-val dn-text">-${mc.var95}%</div><div class="mb-sub">3개월 기준</div></div>
+    <div class="metric-box"><div class="mb-label">수익 확률</div><div class="mb-val up-text">${mc.prob_gain}%</div><div class="mb-sub">3개월 후</div></div>
+  </div>
+  <div class="detail-panel">
+    <div class="detail-title">종목별 비중</div>
+    ${stocks.map((s,i)=>{
+      const w=Math.round(normW[i]*100);
+      const color=COLORS[s.ticker]||'#4f8ef7';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${color}"></div>
+          <span style="font-size:13px;font-weight:500">${s.ticker}</span>
+          <span style="font-size:11px;color:var(--text2)">${s.name||''}</span>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:${color}">${w}%</span>
+      </div>
+      <div class="bar52" style="margin-bottom:10px"><div class="bar52-fill" style="width:${w}%;background:${color}"></div></div>`;
+    }).join('')}
+  </div>`;
+}
+
+function initWeightControls() {
+  document.getElementById('weight-controls').innerHTML=DEFAULT_TICKERS.map(t=>`
+  <div class="weight-row">
+    <div class="weight-ticker" style="color:${COLORS[t]}">${t}</div>
+    <input class="weight-slider" type="range" min="0" max="100" step="5" value="${portWeights[t]}"
+      oninput="portWeights['${t}']=+this.value;document.getElementById('wv-${t}').textContent=this.value+'%'">
+    <div class="weight-val" id="wv-${t}">${portWeights[t]}%</div>
+  </div>`).join('')+`<button class="go-btn" style="width:100%;margin-top:4px" onclick="loadPortfolio()">분석 실행</button>`;
+}
+
+async function refreshAll() {
+  const btn=document.querySelector('.refresh-btn');
+  btn.textContent='불러오는 중..';btn.disabled=true;
+  stockData={};
+  setLoading();
+  await fetchStock(currentTicker);
+  renderCurrentTab();
+  if(currentTab==='compare') loadCompare();
+  if(currentTab==='portfolio') loadPortfolio();
+  btn.textContent='새로고침';btn.disabled=false;
+}
+
+// ── 초기 실행 ─────────────────────────────────────────────────────────────────
+(async function init() {
+  initWeightControls();
+  await fetchStock('ASTS');
+  renderCurrentTab();
+  setTimeout(()=>{ ['RDW','MSTR','POET'].forEach(t=>fetchStock(t)); }, 2000);
+})();
+</script>
+</body>
+</html>
